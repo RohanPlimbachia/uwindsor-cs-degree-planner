@@ -1,60 +1,90 @@
 import { useAuth } from '../context/AuthContext';
 
-export default function Header({ view, onLoginClick }) {
+export default function Header({ view, onLoginClick, onHomeClick, onPlannerClick }) {
   const { token, logout } = useAuth();
 
   return (
     <header style={styles.topBar}>
       <div style={styles.leftNav}>
-        <span style={styles.homeLink}>Home</span>
-        {view === 'planner' && (
-          <div style={styles.headerInfo}>
-            <div>School: University of Windsor</div>
-            <div>Program: Bachelor of Computer Science</div>
-          </div>
+        <span 
+          style={view === 'onboarding' ? { ...styles.navLink, ...styles.activeLink } : styles.navLink} 
+          onClick={onHomeClick}
+        >
+          Home
+        </span>
+        <span 
+          style={view === 'planner' ? { ...styles.navLink, ...styles.activeLink } : styles.navLink} 
+          onClick={onPlannerClick}
+        >
+          Degree Map
+        </span>
+        <span style={styles.disabledLink} title="Coming Soon">
+          Prof Insights
+        </span>
+      </div>
+      
+      <div style={styles.rightNav}>
+        {token ? (
+          <button style={styles.logoutBtn} onClick={logout}>Logout</button>
+        ) : (
+          <button style={styles.loginBtn} onClick={onLoginClick}>Login</button>
         )}
       </div>
-      {token ? (
-        <button style={styles.loginBtn} onClick={logout}>Logout</button>
-      ) : (
-        <button style={styles.loginBtn} onClick={onLoginClick}>Login / Signup</button>
-      )}
     </header>
   );
 }
 
 const styles = {
   topBar: {
-    backgroundColor: '#000',
-    height: 60,
     display: 'flex',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '0 20px',
+    alignItems: 'center',
+    padding: '16px 24px',
+    borderBottom: '1px solid #1f2937',
+    backgroundColor: '#000000' // Black Header
   },
   leftNav: {
     display: 'flex',
     alignItems: 'center',
-    gap: 25,
+    gap: '32px' 
   },
-  homeLink: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 18,
+  rightNav: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  navLink: {
     cursor: 'pointer',
+    fontSize: '16px',
+    color: '#9ca3af', // Gray text for inactive
+    fontWeight: '500',
+    transition: 'color 0.2s ease',
   },
-  headerInfo: {
-    color: 'white',
-    fontSize: 14,
-    lineHeight: 1.4,
+  activeLink: {
+    color: '#ffffff', // White text for active
+    fontWeight: '700',
+  },
+  disabledLink: {
+    cursor: 'default',
+    fontSize: '16px',
+    color: '#4b5563', // Darker gray to look disabled
+    fontWeight: '500',
   },
   loginBtn: {
-    backgroundColor: 'transparent',
-    color: 'white',
-    border: '1px solid #fff',
+    backgroundColor: '#ffffff', // White Button
+    color: '#111827', // Black Text
+    border: 'none',
     padding: '8px 16px',
-    borderRadius: 4,
+    borderRadius: '6px',
     cursor: 'pointer',
-    fontSize: 14,
+    fontWeight: '700'
   },
+  logoutBtn: {
+    backgroundColor: '#ef4444',
+    color: '#fff',
+    border: 'none',
+    padding: '8px 16px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '600'
+  }
 };

@@ -6,21 +6,36 @@ import Planner from './components/Planner';
 import LoginModal from './components/LoginModal';
 
 export default function App() {
-  const [view, setView] = useState('onboarding');
-  const [load, setLoad] = useState('full');
+  const [view, setView] = useState('onboarding'); 
   const [showLogin, setShowLogin] = useState(false);
-
-  const handleOnboardingSubmit = ({ load }) => {
-    setLoad(load);
-    setView('planner');
-  };
+  
+  // Track if the student is full-time or part-time globally
+  const [studyLoad, setStudyLoad] = useState('full-time'); 
 
   return (
     <AuthProvider>
-      <Header view={view} onLoginClick={() => setShowLogin(true)} />
-      {view === 'onboarding' && <Onboarding onSubmit={handleOnboardingSubmit} />}
-      {view === 'planner' && <Planner load={load} />}
-      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Header 
+          view={view} 
+          onLoginClick={() => setShowLogin(true)} 
+          onHomeClick={() => setView('onboarding')}
+          onPlannerClick={() => setView('planner')}
+        />
+        
+        <main style={{ flex: 1, backgroundColor: '#f9fafb' }}>
+           {view === 'onboarding' ? (
+             <Onboarding 
+               onSubmit={() => setView('planner')} 
+               studyLoad={studyLoad}           /* <-- Pass state down */
+               setStudyLoad={setStudyLoad}     /* <-- Pass updater down */
+             />
+           ) : (
+             <Planner studyLoad={studyLoad} /> /* <-- Pass state down */
+           )}
+        </main>
+
+        {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
+      </div>
     </AuthProvider>
   );
 }
