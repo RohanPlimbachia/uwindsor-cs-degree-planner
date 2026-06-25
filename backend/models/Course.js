@@ -21,7 +21,10 @@ const courseSchema = new mongoose.Schema({
     description: {
         type: String,
         required: false
-    }
+    },
+    year: { type: Number, min: 1, max: 4 },
+    isCore: { type: Boolean, default: false },
+    category: { type: String, enum: ['core', 'elective', 'math', 'science', 'other'], default: 'other' },
 });
 
 module.exports = mongoose.model('Course', courseSchema);

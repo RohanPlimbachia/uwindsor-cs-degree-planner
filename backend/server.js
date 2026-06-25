@@ -13,6 +13,7 @@ app.use(express.json()); // Allows the server to understand incoming JSON reques
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/user', require('./routes/userRoutes'));
 app.use('/api/courses', require('./routes/courseRoutes'));
+app.use('/api/schedule', require('./routes/scheduleRoutes'));
 
 // A basic test route
 app.get('/api/health', (req, res) => {
