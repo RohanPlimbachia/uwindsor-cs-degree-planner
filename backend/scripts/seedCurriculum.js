@@ -23,7 +23,6 @@ const curriculum = [
   { code: 'COMP 2650', name: 'Computer Architecture I', credits: 3, prereqs: ['COMP 1400', 'COMP 1000'], year: 2, isCore: true, category: 'core' },
   { code: 'COMP 2660', name: 'Computer Architecture II', credits: 3, prereqs: ['COMP 2650'], year: 2, isCore: true, category: 'core' },
   { code: 'STAT 2910', name: 'Statistics for the Sciences', credits: 3, prereqs: ['MATH 1720'], year: 2, isCore: true, category: 'science' },
-  { code: 'MATH 1730', name: 'Integral Calculus', credits: 3, prereqs: ['MATH 1720'], year: 1, isCore: false, category: 'math' },
 
   // Year 3 — Core
   { code: 'COMP 3150', name: 'Database Management Systems', credits: 3, prereqs: ['COMP 2540'], year: 3, isCore: true, category: 'core' },

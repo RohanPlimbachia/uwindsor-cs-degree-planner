@@ -17,16 +17,37 @@ function scoreCourse(course, professor, programYear) {
   return score;
 }
 
+// ponytail: UWindsor CS requires 4 electives minimum; update if calendar changes
+const ELECTIVES_REQUIRED = 4;
+
 // suggest({ programYear, courseLoad, completedCourses, semester })
-// Returns: { semester, courseLoad, courses[], totalCredits, skipped[] }
+// Returns: { semester, courseLoad, suggested[], totalCredits, skipped[], remainingRequirements }
 async function suggest({ programYear, courseLoad, completedCourses, semester }) {
   const maxCourses = courseLoad === 'full' ? 5 : 3;
   const completed = new Set(completedCourses.map(c => c.toUpperCase()));
 
-  const sections = await Section.find({ semester });
+  const [sections, allCourses] = await Promise.all([
+    Section.find({ semester }),
+    Course.find({}),
+  ]);
+
+  // Compute remainingRequirements from full curriculum regardless of what's offered this semester
+  const remainingCore = allCourses
+    .filter(c => c.isCore && !completed.has(c.code.toUpperCase()))
+    .map(c => ({ code: c.code, name: c.name }));
+
+  const completedElectiveCount = allCourses.filter(
+    c => !c.isCore && ['elective', 'math'].includes(c.category) && completed.has(c.code.toUpperCase())
+  ).length;
+  const electivesNeeded = Math.max(0, ELECTIVES_REQUIRED - completedElectiveCount);
+  const remainingRequirements = {
+    core: remainingCore,
+    electives: { needed: electivesNeeded, categories: electivesNeeded > 0 ? ['COMP 4XX', 'MATH'] : [] },
+  };
+
   if (!sections.length) {
     return {
-      semester, courseLoad, courses: [], totalCredits: 0, skipped: [],
+      semester, courseLoad, suggested: [], totalCredits: 0, skipped: [], remainingRequirements,
       warning: `No sections found for "${semester}". Run seedSections or syncSchedule first.`,
     };
   }
@@ -36,8 +57,8 @@ async function suggest({ programYear, courseLoad, completedCourses, semester }) 
   const profDocs = await Professor.find({ nameKey: { $in: profKeys } });
   const profMap = Object.fromEntries(profDocs.map(p => [p.nameKey, p]));
 
-  const offeredCodes = [...new Set(sections.map(s => s.courseCode.toUpperCase()))];
-  const courses = await Course.find({ code: { $in: offeredCodes } });
+  const offeredCodes = new Set(sections.map(s => s.courseCode.toUpperCase()));
+  const courses = allCourses.filter(c => offeredCodes.has(c.code.toUpperCase()));
 
   const results = [];
   const skipped = [];
@@ -88,9 +109,10 @@ async function suggest({ programYear, courseLoad, completedCourses, semester }) 
   return {
     semester,
     courseLoad,
-    courses: output,
+    suggested: output,
     totalCredits: output.reduce((s, c) => s + c.credits, 0),
     skipped,
+    remainingRequirements,
   };
 }
 

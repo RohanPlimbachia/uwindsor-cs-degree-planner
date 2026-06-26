@@ -1,14 +1,57 @@
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
-export default function Onboarding({ onSubmit, studyLoad, setStudyLoad }) {
-  const [country, setCountry] = useState('Canada');
-  const [institution, setInstitution] = useState('University of Windsor');
-  const [department, setDepartment] = useState('Computer Science');
-  const [program, setProgram] = useState('B.Sc. Computer Science');
+export default function Onboarding({ onSubmit, onLoginRequired }) {
+  const { token, authFetch } = useAuth();
+
+  const [programYear, setProgramYear] = useState('1');
+  const [courseLoad, setCourseLoad] = useState('full');
+  const [semester, setSemester] = useState('Fall 2025');
+  const [completedCourses, setCompletedCourses] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async () => {
+    if (!token) {
+      onLoginRequired();
+      return;
+    }
+
+    const completed = completedCourses
+      .split(',')
+      .map(c => c.trim().toUpperCase())
+      .filter(Boolean);
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await authFetch('/api/schedule/suggest', {
+        method: 'POST',
+        body: JSON.stringify({
+          programYear: parseInt(programYear, 10),
+          courseLoad,
+          completedCourses: completed,
+          semester,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || 'Request failed. Are you logged in?');
+        return;
+      }
+
+      onSubmit(data);
+    } catch {
+      setError('Could not reach the server. Is the backend running?');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={styles.container}>
-      
       <div style={styles.heroSection}>
         <h1 style={styles.heading}>
           Map Out Your <span style={styles.highlight}>Academic Future</span>
@@ -17,90 +60,71 @@ export default function Onboarding({ onSubmit, studyLoad, setStudyLoad }) {
           Take the guesswork out of graduation. This degree planner helps you visualize your entire academic journey from your first day to your final semester. Select your program details below to generate a customized, interactive roadmap that tracks your prerequisites, balances your study load, and ensures you meet all requirements to graduate on time.
         </p>
       </div>
-      
+
       <div style={styles.formCard}>
-        
-        {/* Country Dropdown */}
+
+        {/* Program Year */}
         <div style={styles.inputGroup}>
-          <label style={styles.label}>Country</label>
-          <select 
-            value={country} 
-            onChange={(e) => setCountry(e.target.value)} 
+          <label style={styles.label}>Program Year</label>
+          <select
+            value={programYear}
+            onChange={(e) => setProgramYear(e.target.value)}
             style={styles.selectInput}
           >
-            <option value="Canada">Canada</option>
-            <option value="United States">United States</option>
-            <option value="International">International (Other)</option>
+            <option value="1">Year 1</option>
+            <option value="2">Year 2</option>
+            <option value="3">Year 3</option>
+            <option value="4">Year 4</option>
           </select>
         </div>
 
-        {/* Institution Dropdown */}
-        <div style={styles.inputGroup}>
-          <label style={styles.label}>Institution</label>
-          <select 
-            value={institution} 
-            onChange={(e) => setInstitution(e.target.value)} 
-            style={styles.selectInput}
-          >
-            <option value="University of Windsor">University of Windsor</option>
-            <option value="University of Toronto">University of Toronto</option>
-            <option value="University of Waterloo">University of Waterloo</option>
-            <option value="Western University">Western University</option>
-          </select>
-        </div>
-
-        {/* Department Dropdown */}
-        <div style={styles.inputGroup}>
-          <label style={styles.label}>Department</label>
-          <select 
-            value={department} 
-            onChange={(e) => setDepartment(e.target.value)} 
-            style={styles.selectInput}
-          >
-            <option value="Computer Science">Computer Science</option>
-            <option value="Engineering">Engineering</option>
-            <option value="Business">Business</option>
-            <option value="Science">Science</option>
-            <option value="Arts, Humanities & Social Sciences">Arts, Humanities & Social Sciences</option>
-          </select>
-        </div>
-
-        {/* Program Dropdown */}
-        <div style={styles.inputGroup}>
-          <label style={styles.label}>Program / Major</label>
-          <select 
-            value={program} 
-            onChange={(e) => setProgram(e.target.value)} 
-            style={styles.selectInput}
-          >
-            <option value="B.Sc. Computer Science">B.Sc. Computer Science</option>
-            <option value="B.Sc. Applied Computing">B.Sc. Applied Computing</option>
-            <option value="B.A. Computer Science">B.A. Computer Science</option>
-            <option value="Minor in Computer Science">Minor in Computer Science</option>
-          </select>
-        </div>
-
-        {/* Study Pace Toggle */}
+        {/* Course Load */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Study Pace</label>
           <div style={styles.loadToggleContainer}>
-            <button 
-              style={studyLoad === 'full-time' ? styles.activeToggle : styles.inactiveToggle}
-              onClick={() => setStudyLoad('full-time')}
+            <button
+              style={courseLoad === 'full' ? styles.activeToggle : styles.inactiveToggle}
+              onClick={() => setCourseLoad('full')}
             >
               Full Time (5 Courses)
             </button>
-            <button 
-              style={studyLoad === 'part-time' ? styles.activeToggle : styles.inactiveToggle}
-              onClick={() => setStudyLoad('part-time')}
+            <button
+              style={courseLoad === 'part' ? styles.activeToggle : styles.inactiveToggle}
+              onClick={() => setCourseLoad('part')}
             >
               Part Time (3 Courses)
             </button>
           </div>
         </div>
 
-        <button style={styles.submitButton} onClick={onSubmit}>
-          View Degree Map →
+        {/* Semester */}
+        <div style={styles.inputGroup}>
+          <label style={styles.label}>Semester</label>
+          <input
+            type="text"
+            value={semester}
+            onChange={(e) => setSemester(e.target.value)}
+            style={styles.selectInput}
+          />
+        </div>
+
+        {/* Completed Courses */}
+        <div style={styles.inputGroup}>
+          <label style={styles.label}>Completed Courses</label>
+          <textarea
+            value={completedCourses}
+            onChange={(e) => setCompletedCourses(e.target.value)}
+            placeholder="e.g. COMP 1000, COMP 1400, MATH 1720"
+            rows={3}
+            style={{ ...styles.selectInput, resize: 'vertical', lineHeight: '1.5' }}
+          />
+          <span style={styles.helperText}>Optional for new students — leave blank if you haven't completed any courses yet.</span>
+        </div>
+
+        {error && <p style={styles.errorText}>{error}</p>}
+
+        <button style={styles.submitButton} onClick={handleSubmit} disabled={loading}>
+          {loading ? 'Loading…' : 'View Degree Map →'}
         </button>
       </div>
     </div>
@@ -172,7 +196,7 @@ const styles = {
     boxSizing: 'border-box',
     cursor: 'pointer',
     transition: 'border-color 0.2s',
-    appearance: 'auto' 
+    appearance: 'auto'
   },
   loadToggleContainer: {
     display: 'flex',
@@ -200,9 +224,20 @@ const styles = {
     cursor: 'pointer',
     transition: 'all 0.2s'
   },
+  helperText: {
+    display: 'block',
+    fontSize: '13px',
+    color: '#6b7280',
+    marginTop: '6px'
+  },
+  errorText: {
+    color: '#dc2626',
+    fontSize: '14px',
+    marginBottom: '12px'
+  },
   submitButton: {
     width: '100%',
-    backgroundColor: '#10b981', 
+    backgroundColor: '#10b981',
     color: '#fff',
     border: 'none',
     borderRadius: '8px',

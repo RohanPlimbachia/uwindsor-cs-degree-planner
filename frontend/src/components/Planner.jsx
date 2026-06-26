@@ -1,121 +1,140 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
-export default function Planner({ studyLoad }) {
-  const isFullTime = studyLoad === 'full-time';
-  const maxCreditsPerTerm = isFullTime ? 15 : 9;
-  const maxCourses = isFullTime ? 5 : 3;
+export default function Planner({ result }) {
+  const [skippedOpen, setSkippedOpen] = useState(false);
 
-  // Added descriptions so the popup has data to show
-  const allCourses = [
-    { id: 1, name: 'Key Concepts in Computer Science', code: 'COMP-1000', credits: 3, description: 'An introduction to fundamental computer science concepts, architecture, and programming logic.' },
-    { id: 2, name: 'Differential Calculus', code: 'MATH-1720', credits: 3, description: 'Limits, derivatives, applications of derivatives, and introduction to integration.' },
-    { id: 3, name: 'Intro to Algorithms I', code: 'COMP-1400', credits: 3, description: 'Problem-solving using a high-level programming language.' },
-    { id: 4, name: 'Linear Algebra', code: 'MATH-1250', credits: 3, description: 'Systems of linear equations, matrices, vectors, and eigenvalues.' },
-    { id: 5, name: 'Intro to Web Dev', code: 'COMP-1047', credits: 3, description: 'Basic web development using HTML, CSS, and modern web standards.' },
-  ];
+  if (!result) {
+    return (
+      <div style={styles.boardContainer}>
+        <p style={{ color: '#6b7280', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+          No results yet. Go back and submit the form.
+        </p>
+      </div>
+    );
+  }
 
-  const [semesters, setSemesters] = useState([]);
-  
-  // State to track which course is currently being viewed in the popup
-  const [selectedCourse, setSelectedCourse] = useState(null);
-
-  useEffect(() => {
-    setSemesters([
-      {
-        id: 'fall2024',
-        title: 'Fall 2024',
-        maxCredits: maxCreditsPerTerm,
-        courses: allCourses.slice(0, maxCourses) 
-      },
-      {
-        id: 'winter2024',
-        title: 'Winter 2024',
-        maxCredits: maxCreditsPerTerm,
-        courses: isFullTime ? [] : allCourses.slice(maxCourses, 5) 
-      },
-      {
-        id: 'summer2024',
-        title: 'Summer 2024',
-        maxCredits: maxCreditsPerTerm,
-        courses: []
-      }
-    ]);
-  }, [studyLoad]);
+  const { suggested = [], skipped = [], remainingRequirements = {}, semester, courseLoad, totalCredits, warning } = result;
+  const isFullTime = courseLoad === 'full';
 
   return (
     <div style={styles.boardContainer}>
-      {semesters.map((semester) => {
-        const currentCredits = semester.courses.reduce((sum, course) => sum + course.credits, 0);
-        const progressPercent = Math.min((currentCredits / semester.maxCredits) * 100, 100);
 
-        return (
-          <div key={semester.id} style={styles.column}>
-            <div style={styles.columnHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h3 style={styles.columnTitle}>{semester.title}</h3>
-                <span style={isFullTime ? styles.badgeF : styles.badgeP}>
-                  {isFullTime ? 'F' : 'P'}
-                </span>
-              </div>
-              <button style={styles.menuIcon}>⋮</button>
-            </div>
+      {warning && <p style={styles.warning}>{warning}</p>}
 
-            <div style={styles.courseList}>
-              {semester.courses.map(course => (
-                <div 
-                  key={course.id} 
-                  style={styles.card} 
-                  onClick={() => setSelectedCourse(course)} // <-- Opens the popup!
-                >
-                  <div style={styles.cardName}>{course.name}</div>
-                  <div style={styles.cardDetails}>
-                    <span>{course.code}</span>
-                    <span>Credits: {course.credits}</span>
-                  </div>
-                </div>
-              ))}
-              
-              <button style={styles.addCourseBtn}>
-                <span style={styles.addIcon}>+</span> Add Course
-              </button>
-            </div>
-
-            <div style={styles.progressSection}>
-              <div style={styles.progressText}>
-                Credits: {currentCredits}/{semester.maxCredits}
-              </div>
-              <div style={styles.progressBarBg}>
-                <div style={{...styles.progressBarFill, width: `${progressPercent}%`}}></div>
-              </div>
-            </div>
+      {/* ── Suggested ── */}
+      <div style={styles.column}>
+        <div style={styles.columnHeader}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={styles.columnTitle}>{semester}</h3>
+            <span style={isFullTime ? styles.badgeF : styles.badgeP}>
+              {isFullTime ? 'F' : 'P'}
+            </span>
           </div>
-        );
-      })}
+          <span style={styles.creditsBadge}>{totalCredits} credits</span>
+        </div>
 
-      {/* --- COURSE INFO POPUP MODAL --- */}
-      {selectedCourse && (
-        <div style={styles.modalOverlay} onClick={() => setSelectedCourse(null)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h2 style={styles.modalCode}>{selectedCourse.code}</h2>
-              <button onClick={() => setSelectedCourse(null)} style={styles.closeButton}>✕</button>
-            </div>
-            <h3 style={styles.modalName}>{selectedCourse.name}</h3>
-            
-            <div style={styles.modalBody}>
-              <p style={styles.modalDetail}><strong>Credits:</strong> {selectedCourse.credits}</p>
-              <p style={styles.modalDetail}><strong>Description:</strong> {selectedCourse.description || "No description available."}</p>
-              <p style={styles.modalDetail}><strong>Prerequisites:</strong> None</p>
-            </div>
+        <div style={styles.courseList}>
+          {suggested.length === 0
+            ? <p style={styles.emptyNote}>No suggestions — check skipped courses below.</p>
+            : suggested.map(c => (
+              <div key={c.code} style={styles.card}>
+                <div style={styles.cardName}>{c.name}</div>
+                <div style={styles.cardDetails}>
+                  <span>{c.code}</span>
+                  <span>{c.days} {c.time}</span>
+                </div>
+                <div style={styles.cardDetails}>
+                  <span style={{ color: '#374151' }}>{c.professor || '—'}</span>
+                  {c.professorRating != null && (
+                    <span style={ratingBadgeStyle(c.professorRating)}>
+                      ★ {c.professorRating.toFixed(1)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
+          }
+        </div>
 
-            <button style={styles.modalActionBtn} onClick={() => setSelectedCourse(null)}>
-              Done
-            </button>
+        <div style={styles.progressSection}>
+          <div style={styles.progressText}>
+            Credits: {totalCredits}/{isFullTime ? 15 : 9}
+          </div>
+          <div style={styles.progressBarBg}>
+            <div style={{ ...styles.progressBarFill, width: `${Math.min((totalCredits / (isFullTime ? 15 : 9)) * 100, 100)}%` }} />
           </div>
         </div>
-      )}
+      </div>
+
+      {/* ── Skipped ── */}
+      <div style={styles.column}>
+        <div style={styles.columnHeader}>
+          <h3 style={styles.columnTitle}>Skipped</h3>
+          <button style={styles.menuIcon} onClick={() => setSkippedOpen(o => !o)}>
+            {skippedOpen ? '▲' : '▼'}
+          </button>
+        </div>
+
+        {skippedOpen && (
+          <div style={styles.courseList}>
+            {skipped.length === 0
+              ? <p style={styles.emptyNote}>None — all eligible courses were suggested.</p>
+              : skipped.map(c => (
+                <div key={c.code} style={{ ...styles.card, borderLeft: '3px solid #f59e0b' }}>
+                  <div style={styles.cardName}>{c.name}</div>
+                  <div style={styles.cardDetails}>
+                    <span>{c.code}</span>
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '6px' }}>{c.reason}</div>
+                </div>
+              ))
+            }
+          </div>
+        )}
+
+        {!skippedOpen && (
+          <p style={styles.emptyNote}>{skipped.length} course{skipped.length !== 1 ? 's' : ''} skipped — expand to see why.</p>
+        )}
+      </div>
+
+      {/* ── Remaining Requirements ── */}
+      <div style={styles.column}>
+        <div style={styles.columnHeader}>
+          <h3 style={styles.columnTitle}>Still Needed</h3>
+        </div>
+
+        <div style={styles.courseList}>
+          {(remainingRequirements.core || []).length === 0 ? (
+            <p style={styles.emptyNote}>All core courses complete.</p>
+          ) : (
+            (remainingRequirements.core || []).map(c => (
+              <div key={c.code} style={{ ...styles.card, borderLeft: '3px solid #6366f1' }}>
+                <div style={styles.cardName}>{c.name}</div>
+                <div style={styles.cardDetails}><span>{c.code}</span></div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {remainingRequirements.electives && (
+          <div style={styles.progressSection}>
+            <div style={styles.progressText}>
+              Electives needed: {remainingRequirements.electives.needed}
+              {remainingRequirements.electives.categories?.length > 0 &&
+                ` (${remainingRequirements.electives.categories.join(', ')})`
+              }
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   );
+}
+
+function ratingBadgeStyle(rating) {
+  const color = rating >= 4 ? '#059669' : rating >= 3 ? '#d97706' : '#dc2626';
+  return { color, fontWeight: '600', fontSize: '13px' };
 }
 
 const styles = {
@@ -128,7 +147,7 @@ const styles = {
     fontFamily: 'system-ui, -apple-system, sans-serif',
     minHeight: '80vh',
     backgroundColor: '#ffffff',
-    position: 'relative' // Needed for modal positioning
+    position: 'relative'
   },
   column: {
     backgroundColor: '#f9fafb',
@@ -158,27 +177,26 @@ const styles = {
   badgeP: {
     backgroundColor: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '999px', fontSize: '12px', fontWeight: '700'
   },
+  creditsBadge: {
+    fontSize: '13px', color: '#6b7280', fontWeight: '600'
+  },
   menuIcon: {
-    background: 'none', border: 'none', fontSize: '20px', color: '#6b7280', cursor: 'pointer'
+    background: 'none', border: 'none', fontSize: '16px', color: '#6b7280', cursor: 'pointer'
   },
   courseList: {
     display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px'
   },
   card: {
     backgroundColor: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', border: '1px solid #f3f4f6',
-    cursor: 'pointer' // Shows it is clickable
   },
   cardName: {
     fontWeight: '600', fontSize: '15px', color: '#111827', marginBottom: '8px', lineHeight: '1.4'
   },
   cardDetails: {
-    display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#6b7280'
+    display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#6b7280', marginTop: '4px'
   },
-  addCourseBtn: {
-    backgroundColor: 'transparent', border: '2px dashed #d1d5db', borderRadius: '12px', padding: '14px', color: '#6b7280', fontWeight: '600', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer'
-  },
-  addIcon: {
-    fontSize: '18px', fontWeight: '400'
+  emptyNote: {
+    fontSize: '13px', color: '#9ca3af', margin: 0
   },
   progressSection: {
     marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #e5e7eb'
@@ -192,33 +210,8 @@ const styles = {
   progressBarFill: {
     backgroundColor: '#10b981', height: '100%', borderRadius: '9999px', transition: 'width 0.3s ease'
   },
-  
-  // Modal Styles
-  modalOverlay: {
-    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(17, 24, 39, 0.4)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-  },
-  modalContent: {
-    backgroundColor: '#ffffff', borderRadius: '16px', padding: '32px', width: '90%', maxWidth: '450px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-  },
-  modalHeader: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #f3f4f6', paddingBottom: '12px', marginBottom: '16px'
-  },
-  modalCode: {
-    margin: 0, fontSize: '24px', fontWeight: '800', color: '#111827'
-  },
-  closeButton: {
-    background: 'none', border: 'none', fontSize: '20px', color: '#9ca3af', cursor: 'pointer'
-  },
-  modalName: {
-    margin: '0 0 24px 0', fontSize: '18px', color: '#4b5563', fontWeight: '500'
-  },
-  modalBody: {
-    marginBottom: '32px'
-  },
-  modalDetail: {
-    fontSize: '15px', color: '#374151', lineHeight: '1.6', marginBottom: '12px'
-  },
-  modalActionBtn: {
-    width: '100%', backgroundColor: '#111827', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '12px', fontSize: '16px', fontWeight: '600', cursor: 'pointer'
+  warning: {
+    position: 'absolute', top: '16px', left: '20px', right: '20px',
+    backgroundColor: '#fef3c7', color: '#92400e', padding: '10px 16px', borderRadius: '8px', fontSize: '14px'
   }
 };
